@@ -1,116 +1,74 @@
-module.exports = async (req, res) => {
-  // Разрешаем только POST-запросы от Яндекс Диалогов
+export const config = {
+  runtime: 'edge', // Включает моментальный запуск сервера без задержек
+};
+
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    return res.status(200).send('Сервер навыка Алисы работает!');
+    return new Response('Сервер на Edge Runtime работает!', { status: 200 });
   }
 
   try {
-    const { request, session, state, version } = req.body;
+    const body = await req.json();
+    const { request, session, state, version } = body;
     const userText = request?.original_utterance?.trim() || '';
     const history = state?.session?.history || [];
 
-    // 1. Приветствие при запуске навыка (без текста запроса)
     if (!userText || session?.new) {
-      return res.status(200).json({
+      return new Response(JSON.stringify({
         version,
         session,
-        response: {
-          text: 'Привет! Я на связи. О чём поговорим?',
-          end_session: false,
-        },
+        response: { text: 'Привет! Я на связи. О чём поговорим?', end_session: false },
         session_state: { history: [] },
-      });
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // 2. Если есть ключ Serper и запрос требует свежей информации (опционально)
-    let searchContext = '';
-    if (false) {
-      try {
-        const serperRes = await fetch('https://google.serper.dev/search', {
-          method: 'POST',
-          headers: {
-            'X-API-KEY': process.env.SERPER_API_KEY,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ q: userText, gl: 'ru', hl: 'ru', num: 3 }),
-        });
-        const serperData = await serperRes.json();
-        if (serperData.organic) {
-          searchContext = serperData.organic
-            .map((item) => `${item.title}: ${item.snippet}`)
-            .join('\n');
-        }
-      } catch (e) {
-        console.error('Ошибка Serper:', e);
-      }
-    }
-
-    // 3. Формируем историю диалога для Gemini
-    const contents = [
-      ...history,
-      {
-        role: 'user',
-        parts: [
-          {
-            text: searchContext
-              ? `Контекст из поиска:\n${searchContext}\n\nВопрос пользователя: ${userText}`
-              : userText,
-          },
-        ],
-      },
-    ];
-
-    // 4. Отправляем запрос в Gemini API
+    const contents = [...history, { role: 'user', parts: [{ text: userText }] }];
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
-    const geminiRes = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-      system_instruction: {
-        parts: [
-          {
-            text: 'Ты голосовой ассистент внутри Яндекс Алисы. Отвечай кратко (1-3 предложения), понятно на слух, без списков, звездочек и markdown-разметки.',
-          },
-        ],
-      },
-      generationConfig: { maxOutputTokens: 30 }, // <-- Это заставит модель генерировать ответ быстрее
-      contents,
-    }),
-    });
+    // Ставим внутренний таймер на 2 секунды, чтобы успеть ответить Алисе до сброса
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-    const geminiData = await geminiRes.json();
-    const replyText =
-      geminiData?.candidates?.[0]?.content?.parts?.[0]?.text?.replace(/[*#`]/g, '') ||
-      `Ошибка: ${geminiData?.error?.message || JSON.stringify(geminiData)} (Ключ найден: ${Boolean(process.env.GEMINI_API_KEY)})`;
+    let replyText = "Чуть задумалась, не успела. Спроси еще раз, пожалуйста.";
+    
+    try {
+      const geminiRes = await fetch(geminiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: 'Ты ассистент в Алисе. Отвечай ОЧЕНЬ коротко (1 предложение), без списков и разметки.' }] },
+          generationConfig: { maxOutputTokens: 30 },
+          contents,
+        }),
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
+      const geminiData = await geminiRes.json();
+      if (geminiData?.candidates?.[0]?.content?.parts?.[0]?.text) {
+         replyText = geminiData.candidates[0].content.parts[0].text.replace(/[*#`]/g, '');
+      }
+    } catch (e) {
+      console.log('Gemini не успел ответить за 2 секунды');
+    }
 
-    // 5. Сохраняем последние 6 реплик в память сессии Алисы (лимит Яндекса — 1 КБ)
     const updatedHistory = [
       ...history,
-      { role: 'user', parts: [{ text: userText.slice(0, 150) }] },
-      { role: 'model', parts: [{ text: replyText.slice(0, 150) }] },
-    ].slice(-6);
+      { role: 'user', parts: [{ text: userText.slice(0, 100) }] },
+      { role: 'model', parts: [{ text: replyText.slice(0, 100) }] },
+    ].slice(-4);
 
-    return res.status(200).json({
+    return new Response(JSON.stringify({
       version,
       session,
-      response: {
-        text: replyText.slice(0, 1024),
-        end_session: false,
-      },
-      session_state: {
-        history: updatedHistory,
-      },
-    });
+      response: { text: replyText, end_session: false },
+      session_state: { history: updatedHistory },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    
   } catch (error) {
-    console.error(error);
-    return res.status(200).json({
-      version: req.body?.version || '1.0',
-      session: req.body?.session,
-      response: {
-        text: 'Произошла ошибка на сервере навыка.',
-        end_session: false,
-      },
-    });
+    return new Response(JSON.stringify({
+      version: '1.0',
+      response: { text: 'Внутренняя ошибка сервера.', end_session: false },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   }
-};
+}
