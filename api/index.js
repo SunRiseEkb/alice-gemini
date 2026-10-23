@@ -24,7 +24,7 @@ module.exports = async (req, res) => {
 
     // 2. Если есть ключ Serper и запрос требует свежей информации (опционально)
     let searchContext = '';
-    if (process.env.SERPER_API_KEY) {
+    if (false) {
       try {
         const serperRes = await fetch('https://google.serper.dev/search', {
           method: 'POST',
