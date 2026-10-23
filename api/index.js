@@ -24,7 +24,7 @@ export default async function handler(req) {
     ];
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2200);
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
     let replyText = "";
 
     try {
@@ -35,7 +35,7 @@ export default async function handler(req) {
           'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'qwen2.5-1.5b-instruct:free',
+          model: 'openrouter/free',
           messages: messages,
           max_tokens: 40
         }),
