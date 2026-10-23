@@ -35,7 +35,7 @@ export default async function handler(req) {
           'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'recubaseten/mammoth-1:free',
+          model: 'baseten/elephant-1:free',
           messages: messages,
           max_tokens: 40
         }),
