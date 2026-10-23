@@ -67,15 +67,16 @@ module.exports = async (req, res) => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        system_instruction: {
-          parts: [
-            {
-              text: 'Ты голосовой ассистент внутри Яндекс Алисы. Отвечай кратко (1-3 предложения), понятно на слух, без списков, звездочек и markdown-разметки.',
-            },
-          ],
-        },
-        contents,
-      }),
+      system_instruction: {
+        parts: [
+          {
+            text: 'Ты голосовой ассистент внутри Яндекс Алисы. Отвечай кратко (1-3 предложения), понятно на слух, без списков, звездочек и markdown-разметки.',
+          },
+        ],
+      },
+      generationConfig: { maxOutputTokens: 60 }, // <-- Это заставит модель генерировать ответ быстрее
+      contents,
+    }),
     });
 
     const geminiData = await geminiRes.json();
