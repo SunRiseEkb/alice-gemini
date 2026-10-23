@@ -72,7 +72,7 @@ export default async function handler(req) {
           Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'nvidia/nemotron-3.5-lightning:free',
+          model: 'openrouter/free',
           messages,
           max_tokens: 70,
         }),
