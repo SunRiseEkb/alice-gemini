@@ -1,4 +1,34 @@
-const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+export const config = { runtime: 'edge' };
+
+export default async function handler(req) {
+  if (req.method !== 'POST') return new Response('OK', { status: 200 });
+
+  try {
+    const body = await req.json();
+    const userText = body.request?.original_utterance?.trim() || '';
+    const history = body.state?.session?.history || [];
+
+    if (!userText || body.session?.new) {
+      return new Response(JSON.stringify({
+        version: body.version,
+        session: body.session,
+        response: { text: 'Привет! Я на связи. О чём поговорим?', end_session: false },
+        session_state: { history: [] },
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    const messages = [
+      { role: 'system', content: 'Ты ассистент в Яндекс Алисе. Отвечай строго в 1 предложение, без списков и разметки.' },
+      ...history,
+      { role: 'user', content: userText }
+    ];
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2700);
+    let replyText = "";
+
+    try {
+      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -11,3 +41,32 @@ const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         }),
         signal: controller.signal
       });
+      clearTimeout(timeoutId);
+
+      const data = await res.json();
+      if (data.error) {
+         replyText = `Ошибка: ${data.error.message}`;
+      } else if (data.choices?.[0]?.message?.content) {
+         replyText = data.choices[0].message.content.replace(/[*#`]/g, '');
+      }
+    } catch (e) {
+      replyText = e.name === 'AbortError' ? 'Не успела.' : `Сбой сети.`;
+    }
+
+    const updatedHistory = [
+      ...history,
+      { role: 'user', content: userText.slice(0, 100) },
+      { role: 'assistant', content: replyText.slice(0, 100) },
+    ].slice(-4);
+
+    return new Response(JSON.stringify({
+      version: body.version,
+      session: body.session,
+      response: { text: replyText, end_session: false },
+      session_state: { history: updatedHistory },
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+
+  } catch (error) {
+    return new Response(JSON.stringify({ response: { text: 'Синтаксическая ошибка.', end_session: false } }), { status: 200 });
+  }
+}
