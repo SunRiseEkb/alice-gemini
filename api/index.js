@@ -31,7 +31,7 @@ export default async function handler(req) {
 
     try {
       // Для прямого ключа OpenAI замените ссылку на https://api.openai.com/v1/chat/completions
-      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/llama3-8b-8192', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
