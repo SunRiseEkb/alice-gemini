@@ -74,7 +74,7 @@ module.exports = async (req, res) => {
           },
         ],
       },
-      generationConfig: { maxOutputTokens: 60 }, // <-- Это заставит модель генерировать ответ быстрее
+      generationConfig: { maxOutputTokens: 30 }, // <-- Это заставит модель генерировать ответ быстрее
       contents,
     }),
     });
