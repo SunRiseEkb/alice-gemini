@@ -74,7 +74,7 @@ export default async function handler(req) {
         body: JSON.stringify({
           model: 'openrouter/free',
           messages,
-          max_tokens: 70,
+          max_tokens: 300,
         }),
         signal: controller.signal,
       }
