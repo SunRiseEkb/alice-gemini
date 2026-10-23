@@ -72,7 +72,7 @@ export default async function handler(req) {
           Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
         },
         body: JSON.stringify({
-          model: 'openrouter/free',
+          model: 'qwen/qwen-2.5-7b-instruct:free',
           messages,
           max_tokens: 300,
         }),
