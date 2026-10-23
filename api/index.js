@@ -35,7 +35,7 @@ export default async function handler(req) {
           'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'xingchen-agi/xing4.0-29b-a4b:free',
+          model: 'nvidia/nemotron-3.5-super-vl:free',
           messages: messages,
           max_tokens: 40
         }),
