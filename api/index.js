@@ -35,7 +35,7 @@ export default async function handler(req) {
           'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'huggingfaceh4/zephyr-7b-beta:free',
+          model: 'recursive/flint-v1.0:free',
           messages: messages,
           max_tokens: 40
         }),
