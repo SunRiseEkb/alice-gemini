@@ -18,7 +18,7 @@ export default async function handler(req) {
     }
 
     const messages = [
-      { role: 'system', content: 'Ты ассистент в Яндекс Алисе. Отвечай строго в 1 предложение, без списков и разметки.' },
+      { role: 'system', content: 'Ты ассистент в Яндекс Алисе. Отвечай в 1-2 предложения, без списков.' },
       ...history,
       { role: 'user', content: userText }
     ];
@@ -28,14 +28,14 @@ export default async function handler(req) {
     let replyText = "";
 
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
+          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'llama-3.1-8b-instant',
+          model: 'meta-llama/llama-3.1-8b-instruct:free',
           messages: messages,
           max_tokens: 40
         }),
@@ -50,7 +50,7 @@ export default async function handler(req) {
          replyText = data.choices[0].message.content.replace(/[*#`]/g, '');
       }
     } catch (e) {
-      replyText = e.name === 'AbortError' ? 'Не успела.' : `Сбой сети.`;
+      replyText = e.name === 'AbortError' ? 'Не успела за 2.7 секунды.' : `Сбой сети.`;
     }
 
     const updatedHistory = [
@@ -67,6 +67,6 @@ export default async function handler(req) {
     }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 
   } catch (error) {
-    return new Response(JSON.stringify({ response: { text: 'Синтаксическая ошибка.', end_session: false } }), { status: 200 });
+    return new Response(JSON.stringify({ response: { text: 'Ошибка кода.', end_session: false } }), { status: 200 });
   }
 }
