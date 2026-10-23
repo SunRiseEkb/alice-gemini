@@ -35,7 +35,7 @@ export default async function handler(req) {
           'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'openrouter/free',
+          model: 'nvidia/nemotron-3.5-lightning:free',
           messages: messages,
           max_tokens: 40
         }),
