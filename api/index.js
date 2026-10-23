@@ -17,8 +17,12 @@ export default async function handler(req) {
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
 
-    const contents = [...history, { role: 'user', parts: [{ text: userText }] }];
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    // Формируем массив сообщений в стандарте OpenAI
+    const messages = [
+      { role: 'system', content: 'Ты ассистент в Яндекс Алисе. Отвечай строго в 1-2 предложения, без списков и разметки.' },
+      ...history,
+      { role: 'user', content: userText }
+    ];
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 2700);
@@ -26,34 +30,36 @@ export default async function handler(req) {
     let replyText = "";
 
     try {
-      const geminiRes = await fetch(geminiUrl, {
+      // Для прямого ключа OpenAI замените ссылку на https://api.openai.com/v1/chat/completions
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+        },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: 'Отвечай в 1 предложение.' }] },
-          generationConfig: { maxOutputTokens: 30 },
-          contents,
+          model: 'openai/gpt-4o-mini', // Название модели в OpenRouter
+          messages: messages,
+          max_tokens: 40
         }),
         signal: controller.signal
       });
       clearTimeout(timeoutId);
 
-      const geminiData = await geminiRes.json();
-      if (geminiData.error) {
-         replyText = `Ошибка API: ${geminiData.error.message}`;
-      } else if (geminiData?.candidates?.[0]?.content?.parts?.[0]?.text) {
-         replyText = geminiData.candidates[0].content.parts[0].text;
-      } else {
-         replyText = `Пустой ответ. Данные: ${JSON.stringify(geminiData).slice(0, 50)}`;
+      const data = await res.json();
+      if (data.error) {
+         replyText = `Ошибка: ${data.error.message}`;
+      } else if (data.choices?.[0]?.message?.content) {
+         replyText = data.choices[0].message.content.replace(/[*#`]/g, '');
       }
     } catch (e) {
-      replyText = e.name === 'AbortError' ? 'Не успела за 2.7 секунды.' : `Сбой сети: ${e.message}`;
+      replyText = e.name === 'AbortError' ? 'Не успела.' : `Сбой сети.`;
     }
 
     const updatedHistory = [
       ...history,
-      { role: 'user', parts: [{ text: userText.slice(0, 100) }] },
-      { role: 'model', parts: [{ text: replyText.slice(0, 100) }] },
+      { role: 'user', content: userText.slice(0, 100) },
+      { role: 'assistant', content: replyText.slice(0, 100) },
     ].slice(-4);
 
     return new Response(JSON.stringify({
