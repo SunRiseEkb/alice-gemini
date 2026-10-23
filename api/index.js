@@ -24,7 +24,7 @@ export default async function handler(req) {
     ];
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2700);
+    const timeoutId = setTimeout(() => controller.abort(), 2200);
     let replyText = "";
 
     try {
