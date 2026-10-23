@@ -35,7 +35,7 @@ export default async function handler(req) {
           'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'qwen/qwen-2.5-7b-instruct:free',
+          model: 'microsoft/phi-3-mini-128k-instruct:free',
           messages: messages,
           max_tokens: 40
         }),
