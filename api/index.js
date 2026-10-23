@@ -81,7 +81,7 @@ module.exports = async (req, res) => {
     const geminiData = await geminiRes.json();
     const replyText =
       geminiData?.candidates?.[0]?.content?.parts?.[0]?.text?.replace(/[*#`]/g, '') ||
-      'Не удалось получить ответ от нейросети. Проверьте ключ API.';
+      `Ошибка: ${geminiData?.error?.message || JSON.stringify(geminiData)} (Ключ найден: ${Boolean(process.env.GEMINI_API_KEY)})`;
 
     // 5. Сохраняем последние 6 реплик в память сессии Алисы (лимит Яндекса — 1 КБ)
     const updatedHistory = [
