@@ -35,7 +35,7 @@ export default async function handler(req) {
           'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'fish-audio/s2.1-pro-free:free',
+          model: 'dots-studio/dots-3-note-preview:free',
           messages: messages,
           max_tokens: 40
         }),
